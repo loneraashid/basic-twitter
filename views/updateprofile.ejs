@@ -1,0 +1,60 @@
+<%- include('components/header') %>
+
+
+    <div class="index-container">
+        <div class="container text-center">
+            <div class="row justify-content-center">
+
+                <div class="col-md-auto anta-regular">
+                    <h1 style="color:#1DA1F2 ;">
+                        <i class="fa-brands fa-twitter"></i>
+                        <span>Twitter</span>
+                    </h1>
+                </div>
+
+            </div>
+            <div class="row justify-content-center poppins-regular">
+
+                <div class=" col-md-auto">
+                    <h5>Hello <br> Update your profile</h5>
+                </div>
+
+            </div>
+            <form class="row g-3 justify-content-center" action="/update-profile" method="post"
+                enctype="multipart/form-data">
+                <div class="col-md-7 d-flex flex-column align-items-start">
+                    <label for="inputName4" class="form-label"> <i class="fa-solid fa-user"></i> Name </label>
+                    <input type="text" name="name" value=" <%= user.name %> " class="form-control" id="inputName4">
+                </div>
+                <div class="col-md-7 d-flex flex-column align-items-start">
+                    <label for="inputEmail4" class="form-label"><i class="fa-solid fa-envelope"></i> Email </label>
+                    <input type="email" name="email" value=" <%= user.email %>" placeholder=" <%= user.email %> "
+                        class="form-control" id="inputEmail4">
+                </div>
+                <div class="col-md-7 d-flex flex-column align-items-start">
+                    <label for="formFile" class="form-label">Upload new profile picture</label>
+                    <input class="form-control" name="photo" type="file" id="formFile">
+                </div>
+                <div class="col-md-7 d-flex flex-column align-items-start">
+                    <label for="inputPassword3" class="form-label"> <i class="fa-solid fa-lock"></i>Old Password</label>
+                    <input type="password" name="oldpassword" class="form-control" id="inputPassword3">
+                </div>
+                <div class="col-md-7 d-flex flex-column align-items-start">
+                    <label for="inputPassword4" class="form-label"> <i class="fa-solid fa-lock"></i>New Password</label>
+                    <input type="password" name="newpassword" class="form-control" id="inputPassword4">
+                </div>
+                <div class="col-7 d-flex justify-content-end">
+
+                    <button type="submit" class="btn btn-primary">Update</button>
+                </div>
+            </form>
+            <p>
+                <a href="/login" style="text-decoration: none;">
+                    Already a user? click here to login
+                </a>
+            </p>
+        </div>
+
+    </div>
+
+    <%- include('components/footer') %>

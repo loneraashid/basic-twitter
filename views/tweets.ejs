@@ -6,11 +6,18 @@
                 <div class="card" style="width: 18rem;">
                     <img src="<%= profile %>" class="card-img-top" alt="...">
                     <div class="card-body">
-                        <p class="card-text">Welcome</p>
+
 
                         <h5 class="card-title">
                             <%= name %>
                         </h5>
+                        <p class="card-text">
+                            <%= followers.length %> Followers
+                        </p>
+                        <p class="card-text">
+                            <%= following.length %> Following
+                        </p>
+                        <a href="/update-profile" class="btn btn-outline-secondary"> Update</a>
                         <a href="/logout" class="btn btn-outline-secondary"> logout</a>
                     </div>
                 </div>
@@ -37,13 +44,68 @@
                             <div class="col card p-1 d-flex flex-row">
                                 <div class="col-10 mb-2 d-flex flex-column align-items-start text-start">
 
-                                    <h5>
-                                        <%= tweet.name %>
-                                    </h5>
+                                    <div class="d-flex flex-row">
+                                        <h5>
+                                            <%= tweet.name %>
+                                        </h5>
+                                        <% if (!following.includes(tweet.userId.toString().trim()) && id.toString()
+                                            !==tweet.userId.toString()) { %>
+                                            <form action="/follow" method="post">
+                                                <input type="hidden" name="tofollow" value=" <%=tweet.userId %> ">
+                                                <input type="hidden" name="fromPage" value="/tweets">
+                                                <button type="submit"
+                                                    class="btn btn-outline-secondary btn-sm mx-2 ">follow</button>
+
+                                            </form>
+
+                                            <% } %>
+                                                <% if (following.includes(tweet.userId.toString().trim()) &&
+                                                    id.toString() !==tweet.userId.toString()) { %>
+                                                    <form action="/unfollow" method="post">
+                                                        <input type="hidden" name="tofollow"
+                                                            value=" <%=tweet.userId %> ">
+                                                        <input type="hidden" name="fromPage" value="/tweets">
+                                                        <button type="submit"
+                                                            class="btn btn-outline-secondary btn-sm mx-2 ">Unfollow</button>
+
+                                                    </form>
+
+                                                    <% } %>
+
+                                    </div>
+
 
                                     <p>
                                         <%-tweet.tweet %>
                                     </p>
+                                    <div class="d-flex align-items-end">
+                                        <form action="/like" method="post"
+                                            class="d-flex mx-5 justify-content-center align-items-center">
+                                            <% if (!tweet.likedby.includes(id)) { %>
+                                                <button type="submit" class="btn btn-sm btn-outline-primary"
+                                                    style="font-size: small; "><i class="fa-solid fa-heart"></i> like
+                                                </button>
+                                                <% } else if (tweet.likedby.includes(id)) { %>
+                                                    <button type="submit" class="btn btn-sm btn-outline-primary"
+                                                        style="font-size: small; ">
+                                                        Unlike
+                                                    </button>
+                                                    <% } %>
+                                                        <input type="hidden" name="tweet" value=" <%= tweet._id%> ">
+                                                        <a class="mx-1">
+
+                                                            <%-tweet.likes %> Likes
+
+                                                        </a>
+                                        </form>
+
+
+                                        <a href="/comments/<%= tweet._id %>">
+                                            <%- tweet.comments.length %> Comments
+
+                                        </a>
+                                    </div>
+
 
 
                                 </div>
@@ -51,7 +113,8 @@
                                     <% if(id.toString( )==tweet.userId.toString()) { %>
                                         <form action="/delete-tweet" method="post">
                                             <input type="hidden" name="tweetId" value="<%= tweet._id %>">
-                                            <button type="submit" class="btn btn-danger">Delete</button>
+                                            <button type="submit" class="btn btn-danger"><i
+                                                    class="fa-solid fa-trash"></i></button>
                                         </form>
 
                                         <% } %>

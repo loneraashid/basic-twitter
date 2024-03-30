@@ -63,11 +63,27 @@ const userSchema = mongoose.Schema({
   password: String,
   profilePicture: String,
   tweets: [],
+  following: [],
+  followers: [],
 });
 const tweetsSchema = mongoose.Schema({
   userId: Schema.ObjectId,
   name: String,
   tweet: String,
+  timestamp: String,
+  likes: {
+    type: Number,
+    default: 0,
+  },
+  likedby: [],
+  comments: [
+    {
+      commentby: String,
+      name: String,
+      comment: String,
+      timestamp: String,
+    },
+  ],
 });
 userSchema.plugin(passportLocalMongoose, {
   usernameField: "email",
@@ -115,6 +131,60 @@ app.get("/logout", (req, res) => {
   });
 });
 
+app.get("/update-profile", upload.single("photo"), async (req, res) => {
+  if (!req.isAuthenticated()) {
+    res.redirect("/login");
+    return;
+  }
+
+  res.render("updateprofile", { user: req.user });
+});
+
+app.post("/update-profile", upload.single("photo"), async (req, res) => {
+  let url;
+  let user = await User.findById(req.user._id);
+  try {
+    if (req.body.name) {
+      await User.findByIdAndUpdate(user._id, {
+        name: req.body.name,
+      });
+    }
+    if (req.body.newpassword) {
+      await user.changePassword(req.body.oldpassword, req.body.newpassword);
+      console.log("password updated succesfully");
+    }
+    if (req.file) {
+      await cloudinary.uploader.destroy(
+        req.body.email,
+        async function (error, result) {
+          if (result) {
+            await cloudinary.uploader.upload(
+              req.file.path,
+              { public_id: req.body.email },
+              async function (error, result) {
+                if (result) {
+                  url = result.secure_url;
+                  fs.unlinkSync(req.file.path);
+                  await User.findByIdAndUpdate(user._id, {
+                    profilePicture: url,
+                  });
+                  console.log("picture updated successfully");
+                }
+              }
+            );
+          }
+        }
+      );
+    }
+
+    res.redirect("/tweets");
+  } catch (e) {
+    console.log(e);
+    console.log("error occured while updating profile");
+    res.redirect("/update-profile");
+  }
+});
+
 app.get("/register", (req, res) => {
   res.render("register");
 });
@@ -123,7 +193,7 @@ app.post("/register", upload.single("photo"), async (req, res) => {
   if (req.file) {
     await cloudinary.uploader.upload(
       req.file.path,
-      { public_id: "olympic_flag" },
+      { public_id: req.body.email },
       function (error, result) {
         if (result) {
           url = result.secure_url;
@@ -164,14 +234,18 @@ app.post("/register", upload.single("photo"), async (req, res) => {
     }
   );
 });
+
 app.get("/tweets", async (req, res) => {
   if (req.isAuthenticated()) {
     const tweets = await Tweet.find();
     res.render("tweets", {
       name: req.user.name,
       profile: req.user.profilePicture,
+      following: req.user.following,
+      followers: req.user.followers,
       id: req.user._id,
       tweets,
+      following: req.user.following,
     });
   } else {
     res.redirect("/login");
@@ -184,11 +258,99 @@ app.post("/tweets", async (req, res) => {
     userId: req.user._id,
     name: req.user.name,
     tweet: req.body.tweet,
+    timestamp: Date.now(),
   });
   await tweet.save();
   const updatedTweets = [...tweets, tweet._id];
   await User.findByIdAndUpdate(req.user._id, { tweets: updatedTweets });
   res.redirect("/tweets");
+});
+
+app.post("/follow", async (req, res) => {
+  const { following } = await User.findById(req.user._id);
+  if (!following.includes(req.body.tofollow.trim())) {
+    following.push(req.body.tofollow.trim());
+    await User.findByIdAndUpdate(req.user._id, { following: following });
+
+    const { followers } = await User.findById(req.body.tofollow.trim());
+    followers.push(req.user._id.trim);
+    await User.findByIdAndUpdate(req.body.tofollow.trim(), {
+      followers: followers,
+    });
+  }
+
+  res.redirect(req.body.fromPage);
+});
+app.post("/unfollow", async (req, res) => {
+  const { following } = await User.findById(req.user._id);
+  if (following.includes(req.body.tofollow.trim())) {
+    let index = following.indexOf(req.body.tofollow.trim());
+    await following.splice(index, 1);
+    await User.findByIdAndUpdate(req.user._id, { following: following });
+
+    const { followers } = await User.findById(req.body.tofollow.trim());
+    index = followers.indexOf(req.user._id);
+    await followers.splice(index, 1);
+    await User.findByIdAndUpdate(req.body.tofollow.trim(), {
+      followers: followers,
+    });
+  }
+  res.redirect(req.body.fromPage);
+});
+app.post("/like", async (req, res) => {
+  // console.log(typeof req.body.tweet);
+  const tweetid = req.body.tweet.trim();
+
+  let { likes, likedby } = await Tweet.findById(tweetid);
+  if (!likedby.includes(req.user._id)) {
+    likes++;
+    likedby.push(req.user._id);
+
+    await Tweet.findByIdAndUpdate(tweetid, {
+      likes,
+      likedby,
+    });
+    res.redirect("/tweets");
+    return;
+  }
+  if (likedby.includes(req.user._id)) {
+    likes--;
+    const index = likedby.indexOf(req.user._id);
+    likedby.splice(index, 1);
+    await Tweet.findByIdAndUpdate(tweetid, { likes, likedby });
+  }
+
+  res.redirect("/tweets");
+});
+
+app.get("/comments/:id", async (req, res) => {
+  const path = req.path;
+  const id = path.slice(10);
+  const tweet = await Tweet.findById(id);
+
+  res.render("comments.ejs", {
+    comments: tweet.comments.reverse(),
+    user: req.user,
+    tweet,
+  });
+});
+app.post("/comment", async (req, res) => {
+  if (req.isAuthenticated()) {
+    console.log(req.body.tweetId);
+    const { comments } = await Tweet.findById(req.body.tweetId);
+    const data = {
+      commentby: req.user._id,
+      name: req.user.name,
+      comment: req.body.comment,
+    };
+    comments.push(data);
+    await Tweet.findByIdAndUpdate(req.body.tweetId, {
+      comments,
+    });
+    res.redirect(`/comments/${req.body.tweetId}`);
+  } else {
+    res.redirect("/login");
+  }
 });
 app.post("/delete-tweet", async (req, res) => {
   const tweet = await Tweet.findById(req.body.tweetId);
